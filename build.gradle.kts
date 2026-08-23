@@ -48,6 +48,10 @@ dependencies {
     // Flyway Migration
     implementation("org.flywaydb:flyway-core:10.10.0")
 
+    // OpenHTMLtoPDF for converting XHTML/CSS to PDF
+    implementation("com.openhtmltopdf:openhtmltopdf-pdfbox:1.0.10")
+    //implementation("com.openhtmltopdf:openhtmltopdf-pdfbox:1.0.10")
+
     // Testing
     testImplementation(kotlin("test"))
     testImplementation(ktorLibs.server.testHost)
