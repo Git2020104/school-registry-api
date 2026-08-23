@@ -1,0 +1,11 @@
+.gradle/
+build/
+.kotlin/
+.androidpe/
+.idea/
+*.iml
+*.db
+h2.mv.db
+core
+.DS_Store
+Thumbs.db
