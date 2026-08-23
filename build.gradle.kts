@@ -41,6 +41,13 @@ dependencies {
     implementation(libs.postgresql)
     implementation(libs.logback.classic)
 
+    // Database & Connection Pool
+    implementation("com.h2database:h2:2.2.224")
+    implementation("com.zaxxer:HikariCP:5.1.0")
+    
+    // Flyway Migration
+    implementation("org.flywaydb:flyway-core:10.10.0")
+
     // Testing
     testImplementation(kotlin("test"))
     testImplementation(ktorLibs.server.testHost)

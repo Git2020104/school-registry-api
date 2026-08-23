@@ -1,21 +1,31 @@
 package com.maranatha.skools.db
 
-import com.maranatha.skools.models.UsersTable
+import com.zaxxer.hikari.HikariConfig
+import com.zaxxer.hikari.HikariDataSource
+import org.flywaydb.core.Flyway
 import org.jetbrains.exposed.sql.Database
-import org.jetbrains.exposed.sql.SchemaUtils
-import org.jetbrains.exposed.sql.transactions.transaction
 
 object DatabaseFactory {
     fun init() {
-        // 1. Connect to local H2 database file
-        Database.connect(
-            url = "jdbc:h2:file:./build/db/school_db;DB_CLOSE_DELAY=-1",
-            driver = "org.h2.Driver"
-        )
-
-        // 2. Create tables inside a transaction
-        transaction {
-            SchemaUtils.create(UsersTable)
+        val config = HikariConfig().apply {
+            // AUTO_SERVER=TRUE allows external DB tools (e.g. DBeaver) to connect while the app is running
+            jdbcUrl = "jdbc:h2:file:./data/db/school_db;DB_CLOSE_DELAY=-1;AUTO_SERVER=TRUE"
+            driverClassName = "org.h2.Driver"
+            maximumPoolSize = 10
+            isAutoCommit = false
+            transactionIsolation = "TRANSACTION_REPEATABLE_READ"
+            validate()
         }
+
+        val dataSource = HikariDataSource(config)
+
+        // Run Flyway migrations before Exposed connects
+        Flyway.configure()
+            .dataSource(dataSource)
+            .load()
+            .migrate()
+
+        // Connect Exposed to the Hikari DataSource
+        Database.connect(dataSource)
     }
 }

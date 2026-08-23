@@ -2,6 +2,7 @@ package com.maranatha.skools
 
 import com.auth0.jwt.JWT
 import com.auth0.jwt.algorithms.Algorithm
+import com.maranatha.skools.db.DatabaseFactory
 import com.maranatha.skools.repository.RefreshTokenRepository
 import com.maranatha.skools.repository.UserRepositoryImpl
 import com.maranatha.skools.routes.authRoutes
@@ -13,6 +14,9 @@ import io.ktor.server.auth.jwt.*
 import io.ktor.server.routing.*
 
 fun Application.module() {
+    // Initialize database pool and run Flyway migrations
+    DatabaseFactory.init()
+
     val jwtSecret = "your-secret-key"
     val jwtIssuer = "http://0.0.0.0:8080/"
     val jwtAudience = "http://0.0.0.0:8080/"
