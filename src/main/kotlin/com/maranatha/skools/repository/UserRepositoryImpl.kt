@@ -10,7 +10,6 @@ import kotlinx.coroutines.Dispatchers
 import org.jetbrains.exposed.exceptions.ExposedSQLException
 import org.jetbrains.exposed.sql.insert
 import org.jetbrains.exposed.sql.selectAll
-import org.jetbrains.exposed.sql.select
 import org.jetbrains.exposed.sql.transactions.experimental.newSuspendedTransaction
 
 class UserRepositoryImpl : UserRepository {
@@ -30,7 +29,8 @@ class UserRepositoryImpl : UserRepository {
     }
 
     override suspend fun getUserById(id: Int): UserResponse = dbQuery {
-        UsersTable.select { UsersTable.id eq id }
+        UsersTable.selectAll()
+            .where { UsersTable.id eq id }
             .map { row ->
                 UserResponse(
                     id = row[UsersTable.id],
@@ -63,7 +63,8 @@ class UserRepositoryImpl : UserRepository {
     }
 
     override suspend fun loginUser(request: LoginRequest): AuthResponse = dbQuery {
-        val row = UsersTable.select { UsersTable.email eq request.email }
+        val row = UsersTable.selectAll()
+            .where { UsersTable.email eq request.email }
             .singleOrNull()
             ?: throw IllegalArgumentException("Invalid email or password.")
 

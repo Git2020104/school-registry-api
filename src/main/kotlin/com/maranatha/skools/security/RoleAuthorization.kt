@@ -7,26 +7,42 @@ import io.ktor.server.auth.jwt.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 
-fun Route.authorizeRoles(vararg allowedRoles: String, build: Route.() -> Unit): Route {
-    val authorizedRoute = createChild(object : RouteSelector() {
-        override suspend fun evaluate(context: RoutingResolveContext, segmentIndex: Int): RouteSelectorEvaluation {
-            return RouteSelectorEvaluation.Constant
-        }
-    })
+class RoleAuthorizationConfig {
+    var requiredRoles: Set<String> = emptySet()
+}
 
-    authorizedRoute.intercept(ApplicationCallPipeline.Call) {
+val RoleAuthorizationPlugin = createRouteScopedPlugin(
+    name = "RoleAuthorizationPlugin",
+    createConfiguration = ::RoleAuthorizationConfig
+) {
+    val roles = pluginConfig.requiredRoles
+
+    on(AuthenticationChecked) { call ->
         val principal = call.principal<JWTPrincipal>()
         val userRole = principal?.payload?.getClaim("role")?.asString()
 
-        if (userRole == null || userRole !in allowedRoles) {
-            call.respond(
-                HttpStatusCode.Forbidden,
-                mapOf("error" to "Access denied: Required role (${allowedRoles.joinToString(", ")}) missing")
-            )
-            finish()
+        if (userRole == null || userRole !in roles) {
+            call.respond(HttpStatusCode.Forbidden, mapOf("error" to "Insufficient permissions"))
         }
     }
+}
 
-    authorizedRoute.build()
-    return authorizedRoute
+fun Route.authorizeRoles(vararg roles: String, build: Route.() -> Unit): Route {
+    val route = createChild(AuthorizedRouteSelector(roles.joinToString(",")))
+    route.install(RoleAuthorizationPlugin) {
+        requiredRoles = roles.toSet()
+    }
+    route.build()
+    return route
+}
+
+fun Route.withRole(vararg roles: String, build: Route.() -> Unit): Route =
+    authorizeRoles(*roles, build = build)
+
+class AuthorizedRouteSelector(private val description: String) : RouteSelector() {
+    override suspend fun evaluate(context: RoutingResolveContext, segmentIndex: Int): RouteSelectorEvaluation {
+        return RouteSelectorEvaluation.Constant
+    }
+
+    override fun toString(): String = "(authorize $description)"
 }
