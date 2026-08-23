@@ -9,7 +9,9 @@ import io.ktor.server.routing.*
 
 fun Route.authorizeRoles(vararg allowedRoles: String, build: Route.() -> Unit): Route {
     val authorizedRoute = createChild(object : RouteSelector() {
-        override fun evaluate(context: RoutingResolveContext, index: Int) = RouteSelectorEvaluation.Constant
+        override suspend fun evaluate(context: RoutingResolveContext, segmentIndex: Int): RouteSelectorEvaluation {
+            return RouteSelectorEvaluation.Constant
+        }
     })
 
     authorizedRoute.intercept(ApplicationCallPipeline.Call) {
