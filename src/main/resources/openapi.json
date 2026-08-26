@@ -1,0 +1,306 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Maranatha Skools API",
+    "description": "Registry School Management System API for UCE/UACE grading, report cards, and academic management",
+    "version": "1.0.0",
+    "contact": {
+      "name": "Maranatha Schools",
+      "email": "support@maranatha.skools"
+    }
+  },
+  "servers": [
+    {
+      "url": "http://localhost:8080",
+      "description": "Development server"
+    },
+    {
+      "url": "https://api.maranatha.skools",
+      "description": "Production server"
+    }
+  ],
+  "tags": [
+    {
+      "name": "Authentication",
+      "description": "User authentication and authorization endpoints"
+    },
+    {
+      "name": "Grading",
+      "description": "Grade management and evaluation endpoints"
+    },
+    {
+      "name": "Reports",
+      "description": "Report card generation and export endpoints"
+    },
+    {
+      "name": "System",
+      "description": "System health and monitoring endpoints"
+    }
+  ],
+  "paths": {
+    "/": {
+      "get": {
+        "summary": "API Root",
+        "description": "Get API root information",
+        "tags": ["System"],
+        "responses": {
+          "200": {
+            "description": "API information",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health": {
+      "get": {
+        "summary": "Health Check",
+        "description": "Check system and database health status",
+        "tags": ["System"],
+        "responses": {
+          "200": {
+            "description": "System is healthy",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "example": "UP"
+                    },
+                    "database": {
+                      "type": "string",
+                      "example": "UP"
+                    },
+                    "timestamp": {
+                      "type": "string",
+                      "example": "1787710722801"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "System is unhealthy",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "example": "DOWN"
+                    },
+                    "database": {
+                      "type": "string",
+                      "example": "DOWN"
+                    },
+                    "error": {
+                      "type": "string",
+                      "example": "Database connection failed"
+                    },
+                    "timestamp": {
+                      "type": "string",
+                      "example": "1787710722801"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api-docs": {
+      "get": {
+        "summary": "API Documentation",
+        "description": "Get API documentation in Markdown format",
+        "tags": ["System"],
+        "responses": {
+          "200": {
+            "description": "API documentation",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/register": {
+      "post": {
+        "summary": "Register User",
+        "description": "Register a new user account",
+        "tags": ["Authentication"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["fullName", "email", "password", "role"],
+                "properties": {
+                  "fullName": {
+                    "type": "string",
+                    "example": "John Doe"
+                  },
+                  "email": {
+                    "type": "string",
+                    "format": "email",
+                    "example": "john.doe@example.com"
+                  },
+                  "password": {
+                    "type": "string",
+                    "format": "password",
+                    "example": "securePassword123"
+                  },
+                  "role": {
+                    "type": "string",
+                    "enum": ["ADMIN", "TEACHER", "SUBJECT_TEACHER", "CLASS_TEACHER", "HEADTEACHER", "PARENT"],
+                    "example": "TEACHER"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "User registered successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "accessToken": {
+                      "type": "string"
+                    },
+                    "refreshToken": {
+                      "type": "string"
+                    },
+                    "user": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "integer"
+                        },
+                        "fullName": {
+                          "type": "string"
+                        },
+                        "email": {
+                          "type": "string"
+                        },
+                        "role": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "429": {
+            "description": "Too many registration attempts"
+          }
+        }
+      }
+    },
+    "/api/v1/auth/login": {
+      "post": {
+        "summary": "User Login",
+        "description": "Authenticate user and return JWT tokens",
+        "tags": ["Authentication"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["email", "password"],
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "format": "email",
+                    "example": "john.doe@example.com"
+                  },
+                  "password": {
+                    "type": "string",
+                    "format": "password",
+                    "example": "securePassword123"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Login successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "accessToken": {
+                      "type": "string"
+                    },
+                    "refreshToken": {
+                      "type": "string"
+                    },
+                    "user": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "integer"
+                        },
+                        "fullName": {
+                          "type": "string"
+                        },
+                        "email": {
+                          "type": "string"
+                        },
+                        "role": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid credentials"
+          },
+          "429": {
+            "description": "Too many login attempts"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "auth-jwt": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "JWT authentication token. Use the /api/v1/auth/login endpoint to obtain a token."
+      }
+    }
+  }
+}

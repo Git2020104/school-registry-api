@@ -1,0 +1,61 @@
+# Gradle
+.gradle/
+build/
+!build/libs/
+gradlew
+gradlew.bat
+
+# IDE
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+.DS_Store
+
+# Logs
+*.log
+logs/
+
+# Data
+data/
+*.db
+*.db.lock
+
+# Test
+test/
+src/test/
+
+# Documentation
+*.md
+!README.md
+!DEPLOYMENT.md
+
+# Git
+.git/
+.gitignore
+
+# Docker
+Dockerfile
+docker-compose.yml
+docker-compose.prod.yml
+.dockerignore
+
+# CI/CD
+.github/
+.gitlab-ci.yml
+
+# Environment files
+.env
+.env.*
+
+# SSL certificates
+certbot/
+*.pem
+*.key
+*.crt
+
+# Temporary files
+*.tmp
+*.swp
+*~

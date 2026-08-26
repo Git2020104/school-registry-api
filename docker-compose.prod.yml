@@ -1,0 +1,85 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:16-alpine
+    container_name: registry-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: registry_db
+      POSTGRES_USER: registry_user
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_INITDB_ARGS: "-E UTF8 --locale=C"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/init-db.sql:/docker-entrypoint-initdb.d/01-init.sql
+    networks:
+      - registry-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U registry_user -d registry_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # Ktor API Application
+  api:
+    image: ${DOCKER_USERNAME}/registry-api:latest
+    container_name: registry-api
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: jdbc:postgresql://postgres:5432/registry_db
+      DATABASE_DRIVER: org.postgresql.Driver
+      DATABASE_USER: registry_user
+      DATABASE_PASSWORD: ${POSTGRES_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_ISSUER: maranatha-skools-api
+      JWT_AUDIENCE: maranatha-skools-users
+      JWT_EXPIRATION: 86400000
+      KTOR_DEPLOYMENT_PORT: 8080
+      KTOR_DEPLOYMENT_HOST: 0.0.0.0
+    expose:
+      - "8080"
+    networks:
+      - registry-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Nginx Reverse Proxy
+  nginx:
+    image: nginx:alpine
+    container_name: registry-nginx
+    restart: unless-stopped
+    depends_on:
+      - api
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./certbot/conf:/etc/letsencrypt:ro
+      - ./certbot/www:/var/www/certbot:ro
+    networks:
+      - registry-network
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+volumes:
+  postgres_data:
+    driver: local
+
+networks:
+  registry-network:
+    driver: bridge
