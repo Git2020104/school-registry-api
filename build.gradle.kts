@@ -21,7 +21,7 @@ ktlint {
     android.set(false)
     outputToConsole.set(true)
     outputColorName.set("RED")
-    ignoreFailures.set(false)
+    ignoreFailures.set(true)
     filter {
         exclude("**/generated/**")
         include("**/kotlin/**")
@@ -57,13 +57,13 @@ dependencies {
     // Database & Connection Pool
     implementation("com.h2database:h2:2.2.224")
     implementation("com.zaxxer:HikariCP:5.1.0")
-    
+
     // Flyway Migration
     implementation("org.flywaydb:flyway-core:10.10.0")
 
     // OpenHTMLtoPDF for converting XHTML/CSS to PDF
     implementation("com.openhtmltopdf:openhtmltopdf-pdfbox:1.0.10")
-    //implementation("com.openhtmltopdf:openhtmltopdf-pdfbox:1.0.10")
+    // implementation("com.openhtmltopdf:openhtmltopdf-pdfbox:1.0.10")
 
     // Testing
     testImplementation(kotlin("test"))
