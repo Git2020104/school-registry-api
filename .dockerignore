@@ -2,8 +2,6 @@
 .gradle/
 build/
 !build/libs/
-gradlew
-gradlew.bat
 
 # IDE
 .idea/
