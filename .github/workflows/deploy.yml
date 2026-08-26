@@ -35,23 +35,12 @@ jobs:
       - name: Run tests
         run: ./gradlew test --no-daemon
 
-      - name: Generate test report
-        if: always()
-        run: ./gradlew testReport --no-daemon
-
       - name: Upload test results
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: test-results
           path: build/reports/tests/test/
-
-      - name: Upload test coverage
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: test-coverage
-          path: build/reports/coverage/
 
   docker-build:
     name: Build Docker Image
