@@ -2,6 +2,7 @@ plugins {
     alias(libs.plugins.kotlin.jvm)
     alias(ktorLibs.plugins.ktor)
     alias(libs.plugins.kotlin.serialization)
+    id("org.jlleitschuh.gradle.ktlint") version "11.6.1"
 }
 
 group = "com.maranatha.skools"
@@ -13,6 +14,18 @@ application {
 
 kotlin {
     jvmToolchain(21)
+}
+
+ktlint {
+    version.set("1.2.1")
+    android.set(false)
+    outputToConsole.set(true)
+    outputColorName.set("RED")
+    ignoreFailures.set(false)
+    filter {
+        exclude("**/generated/**")
+        include("**/kotlin/**")
+    }
 }
 
 dependencies {
@@ -55,4 +68,5 @@ dependencies {
     // Testing
     testImplementation(kotlin("test"))
     testImplementation(ktorLibs.server.testHost)
+    testImplementation(ktorLibs.serialization.kotlinx.json)
 }
