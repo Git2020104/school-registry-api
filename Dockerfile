@@ -3,6 +3,7 @@ WORKDIR /app
 COPY build.gradle.kts settings.gradle.kts ./
 COPY gradlew ./
 COPY gradle/ gradle/
+RUN chmod +x gradlew
 RUN --mount=type=cache,target=/home/gradle/.gradle \
     --mount=type=cache,target=/home/gradle/.m2 \
     ./gradlew --no-daemon --no-scan --no-server clean build
