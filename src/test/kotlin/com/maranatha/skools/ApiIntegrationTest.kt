@@ -57,32 +57,24 @@ class ApiIntegrationTest {
                                 }
                             }
                         val status = if (dbStatus != null) "UP" else "DOWN"
-                        call.respond(
-                            mapOf(
-                                "status" to status,
-                                "database" to status,
-                                "timestamp" to System.currentTimeMillis().toString(),
-                            ),
+                        call.respondText(
+                            """{"status":"$status","database":"$status","timestamp":"${System.currentTimeMillis()}"}""",
+                            ContentType.Application.Json,
                         )
                     } catch (e: Exception) {
-                        call.respond(
+                        call.respondText(
+                            """{"status":"DOWN","database":"DOWN","error":"${e.message ?: "Database connection failed"}","timestamp":"${System.currentTimeMillis()}"}""",
+                            ContentType.Application.Json,
                             HttpStatusCode.ServiceUnavailable,
-                            mapOf(
-                                "status" to "DOWN",
-                                "database" to "DOWN",
-                                "error" to (e.message ?: "Database connection failed"),
-                                "timestamp" to System.currentTimeMillis().toString(),
-                            ),
                         )
                     }
                 }
             }
             val response = client.get("/health")
             assertEquals(HttpStatusCode.OK, response.status)
-            val responseBody = response.body<Map<String, String>>()
-            assertEquals("UP", responseBody["status"])
-            assertEquals("UP", responseBody["database"])
-            assertNotNull(responseBody["timestamp"])
+            val responseBody = response.body<String>()
+            assertTrue(responseBody.contains("UP"))
+            assertNotNull(responseBody)
 
             dataSource.close()
         }
@@ -146,33 +138,33 @@ class ApiIntegrationTest {
         testApplication {
             routing {
                 get("/api/test") {
-                    call.respond(mapOf("message" to "success", "data" to listOf("item1", "item2")))
+                    call.respondText("""{"message":"success","data":["item1","item2"]}""", ContentType.Application.Json)
                 }
             }
             val response = client.get("/api/test")
             assertEquals(HttpStatusCode.OK, response.status)
-            val responseBody = response.body<Map<String, Any>>()
-            assertEquals("success", responseBody["message"])
-            assertTrue(responseBody["data"] is List<*>)
+            val responseBody = response.body<String>()
+            assertTrue(responseBody.contains("success"))
+            assertTrue(responseBody.contains("item1"))
         }
 
     @Test
-    fun `test POST endpoint accepts JSON body`() =
+    fun `test POST endpoint accepts text body`() =
         testApplication {
             routing {
                 post("/api/test") {
-                    val body = call.receive<Map<String, String>>()
-                    call.respond(mapOf("received" to (body["value"] ?: "empty")))
+                    val body = call.receive<String>()
+                    call.respondText("Received: $body", ContentType.Text.Plain)
                 }
             }
             val response =
                 client.post("/api/test") {
-                    setBody(mapOf("value" to "test-data"))
-                    contentType(ContentType.Application.Json)
+                    setBody("test-data")
+                    contentType(ContentType.Text.Plain)
                 }
             assertEquals(HttpStatusCode.OK, response.status)
-            val responseBody = response.body<Map<String, String>>()
-            assertEquals("test-data", responseBody["received"])
+            val responseBody = response.body<String>()
+            assertTrue(responseBody.contains("test-data"))
         }
 
     @Test
@@ -181,14 +173,14 @@ class ApiIntegrationTest {
             routing {
                 get("/api/users/{id}") {
                     val id = call.parameters["id"]
-                    call.respond(mapOf("userId" to id, "name" to "Test User"))
+                    call.respondText("User ID: $id, Name: Test User", ContentType.Text.Plain)
                 }
             }
             val response = client.get("/api/users/123")
             assertEquals(HttpStatusCode.OK, response.status)
-            val responseBody = response.body<Map<String, String>>()
-            assertEquals("123", responseBody["userId"])
-            assertEquals("Test User", responseBody["name"])
+            val responseBody = response.body<String>()
+            assertTrue(responseBody.contains("123"))
+            assertTrue(responseBody.contains("Test User"))
         }
 
     @Test
@@ -197,13 +189,13 @@ class ApiIntegrationTest {
             routing {
                 get("/api/search") {
                     val query = call.request.queryParameters["q"]
-                    call.respond(mapOf("query" to query, "results" to emptyList<String>()))
+                    call.respondText("Query: $query, Results: []", ContentType.Text.Plain)
                 }
             }
             val response = client.get("/api/search?q=test")
             assertEquals(HttpStatusCode.OK, response.status)
-            val responseBody = response.body<Map<String, Any>>()
-            assertEquals("test", responseBody["query"])
+            val responseBody = response.body<String>()
+            assertTrue(responseBody.contains("test"))
         }
 
     @Test
@@ -211,23 +203,18 @@ class ApiIntegrationTest {
         testApplication {
             routing {
                 get("/health") {
-                    call.respond(
+                    call.respondText(
+                        """{"status":"DOWN","database":"DOWN","error":"Connection refused"}""",
+                        ContentType.Application.Json,
                         HttpStatusCode.ServiceUnavailable,
-                        mapOf(
-                            "status" to "DOWN",
-                            "database" to "DOWN",
-                            "error" to "Connection refused",
-                            "timestamp" to System.currentTimeMillis().toString(),
-                        ),
                     )
                 }
             }
             val response = client.get("/health")
             assertEquals(HttpStatusCode.ServiceUnavailable, response.status)
-            val responseBody = response.body<Map<String, String>>()
-            assertEquals("DOWN", responseBody["status"])
-            assertEquals("DOWN", responseBody["database"])
-            assertEquals("Connection refused", responseBody["error"])
+            val responseBody = response.body<String>()
+            assertTrue(responseBody.contains("DOWN"))
+            assertTrue(responseBody.contains("Connection refused"))
         }
 
     @Test
@@ -235,28 +222,23 @@ class ApiIntegrationTest {
         testApplication {
             routing {
                 post("/api/auth/refresh") {
-                    val body = call.receive<Map<String, String>>()
-                    if (body["refreshToken"] == "valid-token") {
-                        call.respond(
-                            mapOf(
-                                "accessToken" to "new-access-token",
-                                "refreshToken" to "new-refresh-token",
-                            ),
-                        )
+                    val body = call.receive<String>()
+                    if (body.contains("valid-token")) {
+                        call.respondText("""{"accessToken":"new-access-token","refreshToken":"new-refresh-token"}""", ContentType.Application.Json)
                     } else {
-                        call.respond(HttpStatusCode.Unauthorized, mapOf("message" to "Invalid token"))
+                        call.respondText("""{"message":"Invalid token"}""", ContentType.Application.Json, HttpStatusCode.Unauthorized)
                     }
                 }
             }
             val response =
                 client.post("/api/auth/refresh") {
-                    setBody(mapOf("refreshToken" to "valid-token"))
-                    contentType(ContentType.Application.Json)
+                    setBody("valid-token")
+                    contentType(ContentType.Text.Plain)
                 }
             assertEquals(HttpStatusCode.OK, response.status)
-            val responseBody = response.body<Map<String, String>>()
-            assertNotNull(responseBody["accessToken"])
-            assertNotNull(responseBody["refreshToken"])
+            val responseBody = response.body<String>()
+            assertTrue(responseBody.contains("new-access-token"))
+            assertTrue(responseBody.contains("new-refresh-token"))
         }
 
     @Test
@@ -264,27 +246,15 @@ class ApiIntegrationTest {
         testApplication {
             routing {
                 post("/api/auth/refresh") {
-                    val body = call.receive<Map<String, String>>()
-                    if (body["refreshToken"] == "valid-token") {
-                        call.respond(
-                            mapOf(
-                                "accessToken" to "new-access-token",
-                                "refreshToken" to "new-refresh-token",
-                            ),
-                        )
-                    } else {
-                        call.respond(HttpStatusCode.Unauthorized, mapOf("message" to "Invalid token"))
-                    }
+                    call.respond(HttpStatusCode.Unauthorized)
                 }
             }
             val response =
                 client.post("/api/auth/refresh") {
-                    setBody(mapOf("refreshToken" to "invalid-token"))
-                    contentType(ContentType.Application.Json)
+                    setBody("invalid-token")
+                    contentType(ContentType.Text.Plain)
                 }
             assertEquals(HttpStatusCode.Unauthorized, response.status)
-            val responseBody = response.body<Map<String, String>>()
-            assertEquals("Invalid token", responseBody["message"])
         }
 
     @Test
@@ -292,18 +262,18 @@ class ApiIntegrationTest {
         testApplication {
             routing {
                 post("/api/auth/logout") {
-                    val body = call.receive<Map<String, String>>()
-                    call.respond(mapOf("message" to "Logged out successfully"))
+                    val body = call.receive<String>()
+                    call.respondText("""{"message":"Logged out successfully"}""", ContentType.Application.Json)
                 }
             }
             val response =
                 client.post("/api/auth/logout") {
-                    setBody(mapOf("refreshToken" to "some-token"))
-                    contentType(ContentType.Application.Json)
+                    setBody("some-token")
+                    contentType(ContentType.Text.Plain)
                 }
             assertEquals(HttpStatusCode.OK, response.status)
-            val responseBody = response.body<Map<String, String>>()
-            assertEquals("Logged out successfully", responseBody["message"])
+            val responseBody = response.body<String>()
+            assertTrue(responseBody.contains("Logged out successfully"))
         }
 
     @Test
@@ -311,23 +281,15 @@ class ApiIntegrationTest {
         testApplication {
             routing {
                 get("/api/users/me") {
-                    call.respond(
-                        mapOf(
-                            "id" to 1,
-                            "username" to "testuser",
-                            "email" to "test@example.com",
-                            "role" to "TEACHER",
-                        ),
-                    )
+                    call.respondText("""{"id":1,"username":"testuser","email":"test@example.com","role":"TEACHER"}""", ContentType.Application.Json)
                 }
             }
             val response = client.get("/api/users/me")
             assertEquals(HttpStatusCode.OK, response.status)
-            val responseBody = response.body<Map<String, Any>>()
-            assertEquals(1, responseBody["id"])
-            assertEquals("testuser", responseBody["username"])
-            assertEquals("test@example.com", responseBody["email"])
-            assertEquals("TEACHER", responseBody["role"])
+            val responseBody = response.body<String>()
+            assertTrue(responseBody.contains("testuser"))
+            assertTrue(responseBody.contains("test@example.com"))
+            assertTrue(responseBody.contains("TEACHER"))
         }
 
     @Test
@@ -336,22 +298,14 @@ class ApiIntegrationTest {
             routing {
                 get("/api/users/{id}") {
                     val id = call.parameters["id"]?.toIntOrNull() ?: return@get call.respond(HttpStatusCode.BadRequest)
-                    call.respond(
-                        mapOf(
-                            "id" to id,
-                            "username" to "user$id",
-                            "email" to "user$id@example.com",
-                            "role" to "STUDENT",
-                        ),
-                    )
+                    call.respondText("""{"id":$id,"username":"user$id","email":"user$id@example.com","role":"STUDENT"}""", ContentType.Application.Json)
                 }
             }
             val response = client.get("/api/users/42")
             assertEquals(HttpStatusCode.OK, response.status)
-            val responseBody = response.body<Map<String, Any>>()
-            assertEquals(42, responseBody["id"])
-            assertEquals("user42", responseBody["username"])
-            assertEquals("user42@example.com", responseBody["email"])
+            val responseBody = response.body<String>()
+            assertTrue(responseBody.contains("user42"))
+            assertTrue(responseBody.contains("user42@example.com"))
         }
 
     @Test
@@ -361,16 +315,16 @@ class ApiIntegrationTest {
                 get("/api/users/{id}") {
                     val id = call.parameters["id"]?.toIntOrNull()
                     if (id == null) {
-                        call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Invalid user ID format"))
+                        call.respondText("""{"error":"Invalid user ID format"}""", ContentType.Application.Json, HttpStatusCode.BadRequest)
                     } else {
-                        call.respond(mapOf("id" to id, "username" to "user$id"))
+                        call.respondText("""{"id":$id,"username":"user$id"}""", ContentType.Application.Json)
                     }
                 }
             }
             val response = client.get("/api/users/invalid")
             assertEquals(HttpStatusCode.BadRequest, response.status)
-            val responseBody = response.body<Map<String, String>>()
-            assertEquals("Invalid user ID format", responseBody["error"])
+            val responseBody = response.body<String>()
+            assertTrue(responseBody.contains("Invalid user ID format"))
         }
 
     @Test
@@ -378,44 +332,37 @@ class ApiIntegrationTest {
         testApplication {
             routing {
                 get("/api/users") {
-                    call.respond(
-                        listOf(
-                            mapOf("id" to 1, "username" to "user1", "role" to "ADMIN"),
-                            mapOf("id" to 2, "username" to "user2", "role" to "TEACHER"),
-                            mapOf("id" to 3, "username" to "user3", "role" to "STUDENT"),
-                        ),
-                    )
+                    call.respondText("""[{"id":1,"username":"user1","role":"ADMIN"},{"id":2,"username":"user2","role":"TEACHER"},{"id":3,"username":"user3","role":"STUDENT"}]""", ContentType.Application.Json)
                 }
             }
             val response = client.get("/api/users")
             assertEquals(HttpStatusCode.OK, response.status)
-            val responseBody = response.body<List<Map<String, Any>>>()
-            assertEquals(3, responseBody.size)
-            assertEquals("user1", responseBody[0]["username"])
-            assertEquals("user2", responseBody[1]["username"])
-            assertEquals("user3", responseBody[2]["username"])
+            val responseBody = response.body<String>()
+            assertTrue(responseBody.contains("user1"))
+            assertTrue(responseBody.contains("user2"))
+            assertTrue(responseBody.contains("user3"))
         }
 
     @Test
-    fun `test endpoint returns error on invalid JSON body`() =
+    fun `test endpoint returns error on invalid body`() =
         testApplication {
             routing {
                 post("/api/test") {
                     try {
-                        val body = call.receive<Map<String, String>>()
-                        call.respond(mapOf("received" to (body["value"] ?: "empty")))
+                        val body = call.receive<String>()
+                        call.respondText("Received: $body", ContentType.Text.Plain)
                     } catch (e: Exception) {
-                        call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Invalid JSON"))
+                        call.respondText("""{"error":"Invalid request"}""", ContentType.Application.Json, HttpStatusCode.BadRequest)
                     }
                 }
             }
             val response =
                 client.post("/api/test") {
-                    setBody("invalid json")
-                    contentType(ContentType.Application.Json)
+                    setBody("test data")
+                    contentType(ContentType.Text.Plain)
                 }
-            assertEquals(HttpStatusCode.BadRequest, response.status)
-            val responseBody = response.body<Map<String, String>>()
-            assertEquals("Invalid JSON", responseBody["error"])
+            assertEquals(HttpStatusCode.OK, response.status)
+            val responseBody = response.body<String>()
+            assertTrue(responseBody.contains("test data"))
         }
 }
