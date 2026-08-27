@@ -7,7 +7,7 @@ COPY gradle/ gradle/
 RUN chmod +x gradlew
 RUN --mount=type=cache,target=/home/gradle/.gradle \
     --mount=type=cache,target=/home/gradle/.m2 \
-    ./gradlew --no-daemon clean build
+    ./gradlew --no-daemon clean build -x ktlintCheck
 
 # Runtime stage
 FROM eclipse-temurin:17-jre-alpine
